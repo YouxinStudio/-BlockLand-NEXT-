@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>方块大陆 BlockLand · NEXT</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%233a8bd8'/%3E%3Crect x='2' y='2' width='5' height='5' fill='%2343b06a'/%3E%3Crect x='9' y='2' width='5' height='5' fill='%23b08a4a'/%3E%3Crect x='2' y='9' width='5' height='5' fill='%238a8a8a'/%3E%3Crect x='9' y='9' width='5' height='5' fill='%23e8d06a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="game-canvas"></div>
+<div id="weather-layer"></div>
+
+<!-- HUD -->
+<div id="hud" style="display:none">
+  <div id="crosshair"></div>
+  <div id="clock">12:00 AM</div>
+  <div id="pos">X 0 Y 0 Z 0</div>
+  <div id="debug" style="display:none"></div>
+  <div id="mode-label">创造</div>
+  <div id="fly-label"></div>
+  <div id="weather-label"></div>
+  <div id="health-wrap">
+    <div id="health-bar"><div id="health-fill"></div></div>
+  </div>
+  <div id="break-progress-wrap"><div id="break-progress"></div></div>
+  <div id="hotbar"></div>
+  <div id="toast"></div>
+  <div id="achievement-toast"></div>
+
+  <!-- 告示牌文字标签层 -->
+  <div id="sign-labels"></div>
+
+  <!-- 触控按钮 -->
+  <div class="touch-ui">
+    <button id="btn-fly" class="tbtn tbtn-small" title="飞行">✈</button>
+    <button id="btn-mode" class="tbtn tbtn-small" title="模式">⇄</button>
+    <button id="btn-sprint" class="tbtn tbtn-small" title="疾跑">»</button>
+    <button id="btn-house" class="tbtn tbtn-small" title="一键建房子（创造）">🏠</button>
+    <button id="btn-picker" class="tbtn tbtn-small" title="方块面板">📦</button>
+    <button id="btn-break" class="tbtn tbtn-mid" title="挖掘（按住）">⛏</button>
+    <button id="btn-place" class="tbtn tbtn-mid" title="放置">🧱</button>
+    <button id="btn-jump" class="tbtn tbtn-big" title="跳跃">⬆</button>
+  </div>
+  <button id="btn-back-menu" class="tbtn menu-btn" title="菜单">☰</button>
+
+  <div id="joystick" style="display:none"><div id="joystick-ball"></div></div>
+</div>
+
+<!-- ========== 标题界面（世界选择） ========== -->
+<div id="title-screen">
+  <div class="title-box">
+    <h1 class="title-logo">方块大陆 <span>NEXT</span></h1>
+    <p class="title-sub">原创体素沙盒 · 多世界 · 模组 · 联机</p>
+
+    <div class="world-list-header">
+      <span>选择世界</span>
+      <button id="btn-new-world" class="mbtn small primary">＋ 新建世界</button>
+    </div>
+    <div id="world-list" class="world-list"></div>
+
+    <div class="title-actions">
+      <button id="btn-title-settings" class="mbtn">⚙ 设置</button>
+      <button id="btn-title-mod" class="mbtn">📦 导入模组</button>
+      <button id="btn-title-mods" class="mbtn">🗑 模组管理</button>
+      <input id="mod-file" type="file" accept=".zip" style="display:none">
+    </div>
+    <p id="mod-count" class="mod-count">未加载自定义方块</p>
+
+    <div class="help">
+      <p><b>键鼠：</b>WASD 移动 · 空格跳 · 左键挖 / 右键放 · 滚轮选方块 · F 飞行 · E 模式 · Esc 菜单</p>
+      <p><b>触屏：</b>左摇杆移动 · 右滑看视角 · 右下挖/放/跳 · ✈ 飞行 · ⇄ 模式</p>
+      <p class="tip">※ 原创体素游戏，与任何商业游戏无关。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 新建世界弹窗 ========== -->
+<div id="new-world-dialog" style="display:none">
+  <div class="dialog-box">
+    <h3>🌍 新建世界</h3>
+    <div class="field">
+      <label>世界名称</label>
+      <input id="nw-name" type="text" maxlength="16" placeholder="我的新世界" value="新世界">
+    </div>
+    <div class="field">
+      <label>世界种子（留空随机）</label>
+      <div class="row">
+        <input id="nw-seed" type="text" placeholder="随机生成">
+        <button id="nw-random-seed" class="mbtn small">🎲 随机</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>世界类型</label>
+      <div class="seg-group" id="nw-biome">
+        <button class="seg active" data-biome="default">🏔 默认</button>
+        <button class="seg" data-biome="flat">🟩 超平坦</button>
+        <button class="seg" data-biome="desert">🏜 沙漠</button>
+        <button class="seg" data-biome="snow">❄ 雪原</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>游戏模式</label>
+      <div class="seg-group" id="nw-mode">
+        <button class="seg active" data-mode="creative">✨ 创造</button>
+        <button class="seg" data-mode="survival">⚔ 生存</button>
+      </div>
+    </div>
+    <div class="row">
+      <button id="nw-cancel" class="mbtn">取消</button>
+      <button id="nw-create" class="mbtn primary">创建并进入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 设置弹窗 ========== -->
+<div id="settings-dialog" style="display:none">
+  <div class="dialog-box wide">
+    <h3>⚙ 游戏设置</h3>
+    <div class="settings-grid">
+      <div class="setting-item">
+        <label>渲染距离 <span id="val-renderdist">4</span> 区块</label>
+        <input id="set-renderdist" type="range" min="2" max="8" step="1" value="4">
+      </div>
+      <div class="setting-item">
+        <label>鼠标灵敏度 <span id="val-sensitivity">1.0</span></label>
+        <input id="set-sensitivity" type="range" min="0.3" max="3.0" step="0.1" value="1.0">
+      </div>
+      <div class="setting-item">
+        <label>视野 FOV <span id="val-fov">75</span>°</label>
+        <input id="set-fov" type="range" min="60" max="100" step="5" value="75">
+      </div>
+      <div class="setting-item">
+        <label>画质</label>
+        <div class="seg-group" id="set-quality">
+          <button class="seg" data-q="low">流畅</button>
+          <button class="seg active" data-q="medium">标准</button>
+          <button class="seg" data-q="high">高清</button>
+        </div>
+      </div>
+      <div class="setting-item">
+        <label>天气</label>
+        <div class="seg-group" id="set-weather">
+          <button class="seg active" data-w="auto">自动</button>
+          <button class="seg" data-w="clear">晴天</button>
+          <button class="seg" data-w="rain">雨天</button>
+          <button class="seg" data-w="storm">雷暴</button>
+        </div>
+      </div>
+      <div class="setting-item">
+        <label>时间</label>
+        <div class="seg-group" id="set-time">
+          <button class="seg active" data-t="cycle">循环</button>
+          <button class="seg" data-t="day">白天</button>
+          <button class="seg" data-t="night">夜晚</button>
+        </div>
+      </div>
+      <div class="setting-item toggle-row">
+        <label>显示坐标</label>
+        <label class="switch"><input id="set-showcoords" type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-item toggle-row">
+        <label>显示十字准星</label>
+        <label class="switch"><input id="set-crosshair" type="checkbox" checked><span class="slider"></span></label>
+      </div>
+      <div class="setting-item toggle-row">
+        <label>昼夜循环</label>
+        <label class="switch"><input id="set-daynight" type="checkbox" checked><span class="slider"></span></label>
+      </div>
+    </div>
+    <div class="row">
+      <button id="set-reset" class="mbtn danger small">恢复默认</button>
+      <button id="set-close" class="mbtn primary">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 模组管理弹窗 ========== -->
+<div id="mods-dialog" style="display:none">
+  <div class="dialog-box wide">
+    <h3>🗑 模组管理 <span class="mods-hint">已导入的方块永久保存，可随时删除</span></h3>
+    <div id="mods-list" class="mods-list"></div>
+    <div class="row" style="margin-top:12px">
+      <button id="mods-clear" class="mbtn danger small">清空全部</button>
+      <button id="mods-close" class="mbtn primary">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 游戏内暂停菜单 ========== -->
+<div id="menu" style="display:none">
+  <div class="menu-box">
+    <h1>暂停 <span id="menu-world-name"></span></h1>
+    <p class="subtitle" id="menu-world-info"></p>
+
+    <button id="btn-resume" class="mbtn primary">▶ 继续游戏</button>
+    <div class="row">
+      <button id="btn-menu-settings" class="mbtn">⚙ 设置</button>
+      <button id="btn-menu-mod" class="mbtn">📦 模组</button>
+    </div>
+    <div class="row">
+      <button id="btn-reset" class="mbtn danger">重置当前世界</button>
+      <button id="btn-to-title" class="mbtn">🏠 返回标题</button>
+    </div>
+    <p id="mod-count-menu" class="mod-count"></p>
+
+    <div class="field" style="margin-top:12px">
+      <label>联机服务器地址</label>
+      <div class="row">
+        <input id="server-ip" type="text" placeholder="ws://192.168.1.100:8081">
+        <button id="btn-server" class="mbtn small">加入</button>
+      </div>
+    </div>
+
+    <div class="help">
+      <h3>操作说明</h3>
+      <p><b>键鼠：</b> WASD 移动 · 空格跳跃 · Ctrl 疾跑 · 左键挖 / 右键放 · 滚轮选方块 · F 飞行 · E 切换模式</p>
+      <p><b>触屏：</b> 左侧拖动摇杆移动 · 右侧拖动看视角 · 右下按钮挖/放/跳/疾跑</p>
+      <p><b>联机：</b> 电脑运行 <code>server/server.js</code> 开服，手机输入 <code>ws://电脑IP:8081</code> 加入</p>
+    </div>
+  </div>
+</div>
+
+<!-- 告示牌输入框 -->
+<div id="sign-dialog" style="display:none">
+  <div class="sign-box">
+    <h3>✏ 输入告示牌文字</h3>
+    <input id="sign-text" type="text" maxlength="24" placeholder="写点什么…">
+    <div class="row">
+      <button id="sign-ok" class="mbtn primary">确定</button>
+      <button id="sign-cancel" class="mbtn">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 方块面板 -->
+<div id="block-picker" style="display:none">
+  <div class="bp-box">
+    <h3>方块面板 <small>点击选择，放到当前快捷栏</small></h3>
+    <div id="block-grid"></div>
+    <button id="bp-close" class="mbtn">关闭</button>
+  </div>
+</div>
+
+<script src="three.min.js"></script>
+<script src="jszip.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/noise.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/world.js"></script>
+<script src="js/player.js"></script>
+<script src="js/net.js"></script>
+<script src="js/mods.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
